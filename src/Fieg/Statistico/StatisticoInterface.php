@@ -2,7 +2,7 @@
 
 namespace Fieg\Statistico;
 
-interface StatsInterface
+interface StatisticoInterface
 {
     /**
      * @param string $bucket
