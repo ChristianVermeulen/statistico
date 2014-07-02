@@ -36,7 +36,8 @@ class RedisDriver implements DriverInterface
      */
     public function timing($bucket, $time)
     {
-        // Not implemented yet
+        $this->redis->hSetNx('timings.' . $bucket, $this->syncedTime(),  $time);
+        $this->redis->sAdd('buckets', $bucket);
     }
 
     /**
@@ -58,10 +59,11 @@ class RedisDriver implements DriverInterface
     public function export($bucket)
     {
         $counts = $this->redis->hGetAll('counts.' . $bucket);
+        $timings = $this->redis->hGetAll('timings.' . $bucket);
 
         return [
             'counts'  => $counts,
-            'timings' => [],
+            'timings' => $timings,
             'gauges'  => [],
         ];
     }

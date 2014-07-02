@@ -58,6 +58,33 @@ class Reader
 
     /**
      * @param  string    $bucket
+     * @param  \DateTime $from
+     * @param  \DateTime $end
+     * @return array
+     */
+    public function queryTimings($bucket, \DateTime $from, \DateTime $end = null)
+    {
+        if (null === $end) {
+            $end = new \DateTime();
+        }
+
+        $data = $this->driver->export($bucket);
+
+        $timings = $data['timings'];
+
+        $retval = [];
+
+        foreach ($timings as $time => $timing) {
+            if ($time > $from->getTimestamp() && $time < $end->getTimestamp()) {
+                $retval[$time] = $timing;
+            }
+        }
+
+        return $retval;
+    }
+
+    /**
+     * @param  string    $bucket
      * @param  \DateTime $end
      * @return float|int
      */
