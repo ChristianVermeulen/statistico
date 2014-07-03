@@ -7,14 +7,23 @@ use Fieg\Statistico\StatisticoInterface;
 Interface DriverInterface extends StatisticoInterface
 {
     /**
-     * @param string $bucket
+     * @param string    $bucket
+     * @param string    $type
+     * @param string    $granularity
+     * @param \DateTime $from
+     * @param \DateTime $to
      *
      * @return array
      */
-    public function export($bucket);
+    public function export($bucket, $type, $granularity, \DateTime $from, \DateTime $to = null);
 
     /**
      * @return string[]
      */
     public function buckets();
+
+    /**
+     * @return string[]
+     */
+    public function types($bucket);
 }

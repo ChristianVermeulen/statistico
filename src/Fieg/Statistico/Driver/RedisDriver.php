@@ -2,6 +2,8 @@
 
 namespace Fieg\Statistico\Driver;
 
+use string;
+
 class RedisDriver implements DriverInterface
 {
     /**
@@ -18,13 +20,24 @@ class RedisDriver implements DriverInterface
     }
 
     /**
+     * @see http://blog.apiaxle.com/post/storing-near-realtime-stats-in-redis/
+     *
      * @param string $bucket
      *
      * @return mixed
      */
     public function increment($bucket)
     {
-        $this->redis->hIncrBy('counts.' . $bucket, $this->syncedTime(),  1);
+        $granularities = $this->getGranularities();
+
+        foreach ($granularities as $granularity => $settings) {
+            $key   = $this->getKey($bucket, 'counts', $granularity, $settings);
+            $field = $this->getField($bucket, 'counts', $granularity, $settings);
+
+            $this->redis->hIncrBy($key, $field, 1);
+            $this->redis->expireAt($key, $this->syncedTime() + $settings['ttl']);
+        }
+
         $this->redis->sAdd('buckets', $bucket);
     }
 
@@ -36,7 +49,16 @@ class RedisDriver implements DriverInterface
      */
     public function timing($bucket, $time)
     {
-        $this->redis->hSetNx('timings.' . $bucket, $this->syncedTime(),  $time);
+        $granularities = $this->getGranularities();
+
+        foreach ($granularities as $granularity => $settings) {
+            $key   = $this->getKey($bucket, 'timings', $granularity, $settings);
+            $field = $this->getField($bucket, 'timings', $granularity, $settings);
+
+            $this->redis->hSetNx($key, $field, $time);
+            $this->redis->expireAt($key, $this->syncedTime() + $settings['ttl']);
+        }
+
         $this->redis->sAdd('buckets', $bucket);
     }
 
@@ -52,20 +74,54 @@ class RedisDriver implements DriverInterface
     }
 
     /**
-     * @param string $bucket
+     * @param string    $bucket
+     * @param string    $type
+     * @param string    $granularity
+     * @param \DateTime $from
+     * @param \DateTime $to
      *
      * @return array
      */
-    public function export($bucket)
+    public function export($bucket, $type, $granularity, \DateTime $from, \DateTime $to = null)
     {
-        $counts = $this->redis->hGetAll('counts.' . $bucket);
-        $timings = $this->redis->hGetAll('timings.' . $bucket);
+        if (null === $to) {
+            $to = new \DateTime();
+        }
 
-        return [
-            'counts'  => $counts,
-            'timings' => $timings,
-            'gauges'  => [],
-        ];
+        $prefix = $this->redis->getOption(\Redis::OPT_PREFIX);
+
+        $granularities = $this->getGranularities();
+        $settings = $granularities[$granularity];
+
+        $keys = $this->redis->keys(sprintf('%s:%s:%s:*', $bucket, $type, $granularity));
+
+        $data = [];
+
+        foreach ($keys as $key) {
+            $key = substr($key, strlen($prefix));
+
+            list (,,, $time) = explode(':', $key);
+
+            $endTime = $time + ($settings['partition'] * $settings['factor']);
+
+            if ($from->getTimestamp() >= $time || $to->getTimestamp() <= $endTime) {
+                $all = $this->redis->hGetAll($key);
+
+                foreach ($all as $stamp => $value) {
+                    if ($stamp >= $from->getTimestamp() && $stamp <= $to->getTimestamp()) {
+                        $data[$stamp] = (int) $value;
+                    }
+                }
+            }
+        }
+
+        ksort($data);
+
+        if ($type === 'counts') {
+            $data = $this->completeCountsData($data, $granularities[$granularity]['factor'], $from, $to);
+        }
+
+        return $data;
     }
 
     /**
@@ -74,6 +130,57 @@ class RedisDriver implements DriverInterface
     public function buckets()
     {
         return (array) $this->redis->sMembers('buckets');
+    }
+
+    /**
+     * @param $bucket
+     *
+     * @return string[]
+     */
+    public function types($bucket)
+    {
+        $prefix = $this->redis->getOption(\Redis::OPT_PREFIX);
+
+        $keys = $this->redis->keys(sprintf('%s:*', $bucket));
+
+        $types = [];
+
+        foreach ($keys as $key) {
+            $key = substr($key, strlen($prefix));
+
+            list (,$type) = explode(':', $key);
+
+            $types[] = $type;
+        }
+
+        return array_unique($types);
+    }
+
+    /**
+     * @param array     $data
+     * @param int       $factor
+     * @param \DateTime $from
+     * @param \DateTime $to
+     *
+     * @return array
+     */
+    protected function completeCountsData(array $data, $factor, \DateTime $from, \DateTime $to = null)
+    {
+        reset($data);
+
+        // factor diff
+        $mod = ($from->getTimestamp() % $factor);
+
+        $min = max($from->getTimestamp() - $mod, key($data)); // first key
+        $max = $to->getTimestamp();
+
+        $retval = [];
+
+        for ($t = $min; $t <= $max; $t+= $factor) {
+            $retval[$t] = isset($data[$t]) ? $data[$t] : 0;
+        }
+
+        return $retval;
     }
 
     /**
@@ -87,5 +194,67 @@ class RedisDriver implements DriverInterface
         $diff = $redisTime - $now;
 
         return $now + $diff;
+    }
+
+    /**
+     * @return array
+     */
+    protected function getGranularities()
+    {
+        $granularities = [
+            'seconds' => [
+                'partition' => 3600,
+                'ttl'       => 7200,
+                'factor'    => 1,
+            ],
+            'minutes' => [
+                'partition' => 1440,
+                'ttl'       => 60 * 60 * 24 * 2,
+                'factor'    => 60,
+            ],
+            'hours' => [
+                'partition' => 24,
+                'ttl'       => 60 * 60 * 24 * 2,
+                'factor'    => 3600,
+            ],
+            'days' => [
+                'partition' => 365,
+                'ttl'       => 86400 * 365,
+                'factor'    => 86400,
+            ],
+        ];
+
+        return $granularities;
+    }
+
+    /**
+     * @param string $bucket
+     * @param string $type        counts, timings, etc.
+     * @param string $granularity
+     * @param array  $settings
+     *
+     * @return string
+     */
+    protected function getKey($bucket, $type, $granularity, array $settings)
+    {
+        $factor = $settings['partition'] * $settings['factor'];
+        $time = floor($this->syncedTime() / $factor) * $factor;
+
+        return sprintf('%s:%s:%s:%s', $bucket, $type, $granularity, $time);
+    }
+
+    /**
+     * @param string $bucket
+     * @param string $type        counts, timings, etc.
+     * @param string $granularity
+     * @param array  $settings
+     *
+     * @return string
+     */
+    protected function getField($bucket, $type, $granularity, array $settings)
+    {
+        $factor = $settings['factor'];
+
+        return floor($this->syncedTime() / $factor) * $factor;
     }
 }

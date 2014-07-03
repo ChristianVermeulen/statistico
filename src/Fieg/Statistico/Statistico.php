@@ -12,11 +12,18 @@ class Statistico implements StatisticoInterface
     protected $driver;
 
     /**
+     * @var Statistico
+     */
+    protected static $sharedInstance;
+
+    /**
      * @param DriverInterface $driver
      */
     public function __construct(DriverInterface $driver)
     {
         $this->driver = $driver;
+
+        static::$sharedInstance = $this;
     }
 
     /**
@@ -41,6 +48,23 @@ class Statistico implements StatisticoInterface
     }
 
     /**
+     * @param string   $bucket
+     * @param callable $closure
+     *
+     * @return mixed
+     */
+    public function measure($bucket, \Closure $closure)
+    {
+        $start = round(microtime(true) * 1000);
+
+        $closure();
+
+        $stop = round(microtime(true) * 1000);
+
+        $this->timing($bucket, $stop - $start);
+    }
+
+    /**
      * @param string $bucket
      * @param float  $value
      *
@@ -49,5 +73,17 @@ class Statistico implements StatisticoInterface
     public function gauge($bucket, $value)
     {
         $this->driver->gauge($bucket, $value);
+    }
+
+    /**
+     * @return Statistico|NullStatistico
+     */
+    public static function sharedInstance()
+    {
+        if (null === static::$sharedInstance) {
+            return new NullStatistico();
+        }
+
+        return static::$sharedInstance;
     }
 }
