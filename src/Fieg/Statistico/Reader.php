@@ -30,6 +30,8 @@ class Reader
     }
 
     /**
+     * @param $bucket
+     *
      * @return string[]
      */
     public function getAvailableTypes($bucket)
