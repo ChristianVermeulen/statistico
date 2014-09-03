@@ -203,24 +203,24 @@ class RedisDriver implements DriverInterface
     {
         $granularities = [
             'seconds' => [
-                'partition' => 3600,
-                'ttl'       => 7200,
-                'factor'    => 1,
+                'partition' => 3600,             # A single partition stores 3600 records (1 hour)
+                'ttl'       => 60 * 60 * 24,     # Each partition is kept for 24 hours
+                'factor'    => 1,                # A second consists of 1 second
             ],
             'minutes' => [
-                'partition' => 1440,
-                'ttl'       => 60 * 60 * 24 * 2,
-                'factor'    => 60,
+                'partition' => 60 * 24,          # A single partition stores 1440 minutes (1 day)
+                'ttl'       => 60 * 60 * 24 * 7, # Each partition kept for 7 days
+                'factor'    => 60,               # A minute consists out of 60 seconds
             ],
             'hours' => [
-                'partition' => 24,
-                'ttl'       => 60 * 60 * 24 * 2,
-                'factor'    => 3600,
+                'partition' => 24,               # A single partition stores 24 hours (1 day)
+                'ttl'       => 60 * 60 * 24 * 7, # Each partition kept for 7 days
+                'factor'    => 3600,             # An hour consists out of 3600 seconds
             ],
             'days' => [
-                'partition' => 365,
-                'ttl'       => 86400 * 365,
-                'factor'    => 86400,
+                'partition' => 365,              # A single partition stores 365 days (1 year)
+                'ttl'       => 86400 * 365 * 5,  # Kept for 5 years
+                'factor'    => 86400,            # A day consists out of 86400 seconds
             ],
         ];
 

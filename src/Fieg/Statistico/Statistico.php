@@ -57,11 +57,13 @@ class Statistico implements StatisticoInterface
     {
         $start = round(microtime(true) * 1000);
 
-        $closure();
+        $retval = $closure();
 
         $stop = round(microtime(true) * 1000);
 
         $this->timing($bucket, $stop - $start);
+
+        return $retval;
     }
 
     /**
