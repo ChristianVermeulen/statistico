@@ -70,7 +70,17 @@ class RedisDriver implements DriverInterface
      */
     public function gauge($bucket, $value)
     {
-        // Not implemented yet
+        $granularities = $this->getGranularities();
+
+        foreach ($granularities as $granularity => $settings) {
+            $key   = $this->getKey($bucket, 'gauges', $granularity, $settings);
+            $field = $this->getField($bucket, 'gauges', $granularity, $settings);
+
+            $this->redis->hSet($key, $field, $value);
+            $this->redis->expireAt($key, $this->syncedTime() + $settings['ttl']);
+        }
+
+        $this->redis->sAdd('buckets', $bucket);
     }
 
     /**

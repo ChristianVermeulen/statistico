@@ -68,4 +68,19 @@ class Reader
 
         return $timings;
     }
+
+    /**
+     * @param string    $bucket
+     * @param string    $granularity
+     * @param \DateTime $from
+     * @param \DateTime $end
+     *
+     * @return array
+     */
+    public function queryGauges($bucket, $granularity, \DateTime $from, \DateTime $end = null)
+    {
+        $gauges = $this->driver->export($bucket, 'gauges', $granularity, $from, $end);
+
+        return $gauges;
+    }
 }
