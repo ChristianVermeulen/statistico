@@ -38,6 +38,8 @@ class NullStatistico implements StatisticoInterface
      */
     public function measure($bucket, \Closure $closure)
     {
-        $closure();
+        $retval = $closure();
+
+        return $retval;
     }
 }
