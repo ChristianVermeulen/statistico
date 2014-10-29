@@ -2,8 +2,6 @@
 
 namespace Fieg\Statistico\Driver;
 
-use string;
-
 class RedisDriver implements DriverInterface
 {
     /**
