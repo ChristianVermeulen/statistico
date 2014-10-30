@@ -8,6 +8,11 @@
         "phpunit/phpunit": "~4.1"
     },
     "autoload": {
-      "psr-0": {"Fieg": "src/"}
+      "psr-0": {
+        "Fieg": "src/"
+      }
+    },
+    "suggest": {
+      "ext-redis": "Allows redis support"
     }
 }
