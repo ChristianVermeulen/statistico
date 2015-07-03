@@ -5,11 +5,22 @@
     "require": {
     },
     "require-dev": {
-        "phpunit/phpunit": "~4.1"
+        "ext-redis": "*",
+        "phpunit/phpunit": "*"
     },
     "autoload": {
       "psr-0": {
         "Fieg": "src/"
+      }
+    },
+    "autoload": {
+      "psr-4": {
+        "Fieg\\Statistico\\": "src/Fieg/Statistico/"
+      }
+    },
+    "autoload-dev": {
+      "psr-4": {
+        "Fieg\\Statistico\\Tests\\": "tests/Fieg/Statistico/"
       }
     },
     "suggest": {
