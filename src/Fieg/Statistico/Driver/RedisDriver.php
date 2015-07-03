@@ -125,10 +125,6 @@ class RedisDriver implements DriverInterface
 
         ksort($data);
 
-        if ($type === 'counts') {
-            $data = $this->completeCountsData($data, $granularities[$granularity]['factor'], $from, $to);
-        }
-
         return $data;
     }
 
@@ -165,43 +161,11 @@ class RedisDriver implements DriverInterface
     }
 
     /**
-     * @param array     $data
-     * @param int       $factor
-     * @param \DateTime $from
-     * @param \DateTime $to
-     *
-     * @return array
-     */
-    protected function completeCountsData(array $data, $factor, \DateTime $from, \DateTime $to = null)
-    {
-        reset($data);
-
-        // factor diff
-        $mod = ($from->getTimestamp() % $factor);
-
-        $min = max($from->getTimestamp() - $mod, key($data)); // first key
-        $max = $to->getTimestamp();
-
-        $retval = [];
-
-        for ($t = $min; $t <= $max; $t+= $factor) {
-            $retval[$t] = isset($data[$t]) ? $data[$t] : 0;
-        }
-
-        return $retval;
-    }
-
-    /**
      * @return int
      */
     protected function syncedTime()
     {
-        $now = time();
-        list($redisTime) = $this->redis->time();
-
-        $diff = $redisTime - $now;
-
-        return $now + $diff;
+        return $this->redis->time()[0];
     }
 
     /**
