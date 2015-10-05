@@ -96,29 +96,19 @@ class RedisDriver implements DriverInterface
             $to = new \DateTime();
         }
 
-        $prefix = $this->redis->getOption(\Redis::OPT_PREFIX);
-
         $granularities = $this->getGranularities();
         $settings = $granularities[$granularity];
 
-        $keys = $this->redis->keys(sprintf('%s:%s:%s:*', $bucket, $type, $granularity));
+        $keys = $this->getKeysForRange($bucket, $type, $granularity, $settings, $from, $to);
 
         $data = [];
 
         foreach ($keys as $key) {
-            $key = substr($key, strlen($prefix));
+            $all = $this->redis->hGetAll($key);
 
-            list (,,, $time) = explode(':', $key);
-
-            $endTime = $time + ($settings['partition'] * $settings['factor']);
-
-            if ($from->getTimestamp() >= $time || $to->getTimestamp() <= $endTime) {
-                $all = $this->redis->hGetAll($key);
-
-                foreach ($all as $stamp => $value) {
-                    if ($stamp >= $from->getTimestamp() && $stamp <= $to->getTimestamp()) {
-                        $data[$stamp] = (int) $value;
-                    }
+            foreach ($all as $stamp => $value) {
+                if ($stamp >= $from->getTimestamp() && $stamp <= $to->getTimestamp()) {
+                    $data[$stamp] = (int) $value;
                 }
             }
         }
@@ -137,7 +127,7 @@ class RedisDriver implements DriverInterface
     }
 
     /**
-     * @param $bucket
+     * @param string $bucket
      *
      * @return string[]
      */
@@ -145,7 +135,15 @@ class RedisDriver implements DriverInterface
     {
         $prefix = $this->redis->getOption(\Redis::OPT_PREFIX);
 
-        $keys = $this->redis->keys(sprintf('%s:*', $bucket));
+        $this->redis->setOption(\Redis::OPT_SCAN, \Redis::SCAN_RETRY);
+
+        $keys = [];
+        $it = NULL; // Initialize our iterator to NULL
+        while ($arr_keys = $this->redis->scan($it, sprintf('%s%s:*', $prefix, $bucket))) {
+            foreach ($arr_keys as $str_key) {
+                $keys[] = $str_key;
+            }
+        }
 
         $types = [];
 
@@ -200,19 +198,35 @@ class RedisDriver implements DriverInterface
     }
 
     /**
+     * @param int $time
+     * @param array $settings
+     *
+     * @return int
+     */
+    protected function getRoundedTime($time, array $settings)
+    {
+        $factor = $settings['partition'] * $settings['factor'];
+        $roundedTime = floor($time / $factor) * $factor;
+
+        return $roundedTime;
+    }
+
+    /**
      * @param string $bucket
-     * @param string $type        counts, timings, etc.
+     * @param string $type counts, timings, etc.
      * @param string $granularity
-     * @param array  $settings
+     * @param array $settings
+     * @param null|int $time
      *
      * @return string
      */
-    protected function getKey($bucket, $type, $granularity, array $settings)
+    protected function getKey($bucket, $type, $granularity, array $settings, $time = null)
     {
-        $factor = $settings['partition'] * $settings['factor'];
-        $time = floor($this->syncedTime() / $factor) * $factor;
+        $time = $time ?: $this->syncedTime();
 
-        return sprintf('%s:%s:%s:%s', $bucket, $type, $granularity, $time);
+        $roundedTime = $this->getRoundedTime($time, $settings);
+
+        return sprintf('%s:%s:%s:%s', $bucket, $type, $granularity, $roundedTime);
     }
 
     /**
@@ -228,5 +242,31 @@ class RedisDriver implements DriverInterface
         $factor = $settings['factor'];
 
         return floor($this->syncedTime() / $factor) * $factor;
+    }
+
+    /**
+     * @param string $bucket
+     * @param string $type
+     * @param string $granularity
+     * @param array $settings
+     * @param \DateTime $from
+     * @param \DateTime $to
+     *
+     * @return string[]
+     */
+    protected function getKeysForRange($bucket, $type, $granularity, array $settings, \DateTime $from, \DateTime $to)
+    {
+        $keys = [];
+
+        $i = $from->getTimestamp();
+        $y = $to->getTimestamp();
+
+        while ($i < $y) {
+            $keys[$this->getKey($bucket, $type, $granularity, $settings, $i)] = 1;
+
+            $i += $settings['factor'];
+        }
+
+        return array_keys($keys);
     }
 }

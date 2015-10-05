@@ -23,6 +23,8 @@ Interface DriverInterface extends StatisticoInterface
     public function buckets();
 
     /**
+     * @param string $bucket
+     *
      * @return string[]
      */
     public function types($bucket);
