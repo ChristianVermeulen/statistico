@@ -37,6 +37,7 @@ class RedisDriver implements DriverInterface
         }
 
         $this->redis->sAdd('buckets', $bucket);
+        $this->redis->sAdd(sprintf('types:%s', $bucket), 'counts');
     }
 
     /**
@@ -58,6 +59,7 @@ class RedisDriver implements DriverInterface
         }
 
         $this->redis->sAdd('buckets', $bucket);
+        $this->redis->sAdd(sprintf('types:%s', $bucket), 'timings');
     }
 
     /**
@@ -79,6 +81,7 @@ class RedisDriver implements DriverInterface
         }
 
         $this->redis->sAdd('buckets', $bucket);
+        $this->redis->sAdd(sprintf('types:%s', $bucket), 'gauges');
     }
 
     /**
@@ -119,7 +122,7 @@ class RedisDriver implements DriverInterface
     }
 
     /**
-     * @return array
+     * @return string[]
      */
     public function buckets()
     {
@@ -133,29 +136,7 @@ class RedisDriver implements DriverInterface
      */
     public function types($bucket)
     {
-        $prefix = $this->redis->getOption(\Redis::OPT_PREFIX);
-
-        $this->redis->setOption(\Redis::OPT_SCAN, \Redis::SCAN_RETRY);
-
-        $keys = [];
-        $it = NULL; // Initialize our iterator to NULL
-        while ($arr_keys = $this->redis->scan($it, sprintf('%s%s:*', $prefix, $bucket))) {
-            foreach ($arr_keys as $str_key) {
-                $keys[] = $str_key;
-            }
-        }
-
-        $types = [];
-
-        foreach ($keys as $key) {
-            $key = substr($key, strlen($prefix));
-
-            list (,$type) = explode(':', $key);
-
-            $types[] = $type;
-        }
-
-        return array_unique($types);
+        return (array) $this->redis->sMembers('types:' . $bucket);
     }
 
     /**
