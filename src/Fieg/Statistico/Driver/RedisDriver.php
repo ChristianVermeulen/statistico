@@ -28,7 +28,7 @@ class RedisDriver implements DriverInterface
         $granularities = $this->getGranularities();
 
         foreach ($granularities as $granularity => $settings) {
-            $key = $this->getKey($bucket, 'counts', $granularity, $settings);
+            $key = $this->getKey($bucket, 'counts', $granularity, $settings, $time);
             $field = $this->getField($settings, $time);
 
             $this->redis->hIncrBy($key, $field, 1);
@@ -48,7 +48,7 @@ class RedisDriver implements DriverInterface
         $granularities = $this->getGranularities();
 
         foreach ($granularities as $granularity => $settings) {
-            $key = $this->getKey($bucket, 'timings', $granularity, $settings);
+            $key = $this->getKey($bucket, 'timings', $granularity, $settings, $time);
             $field = $this->getField($settings, $time);
 
             $this->redis->hSetNx($key, $field, $time);
