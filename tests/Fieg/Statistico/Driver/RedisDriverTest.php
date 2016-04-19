@@ -12,12 +12,15 @@ class RedisDriverTest extends \PHPUnit_Framework_TestCase
     public function increment_adds_bucket_to_buckets_set()
     {
         /** @var \Redis|\PHPUnit_Framework_MockObject_MockObject $redis */
-        $redis = $this->getMockBuilder('\Redis')
-            ->getMock();
+        $redis = $this->getMock(\Redis::class);
 
-        $redis->expects($this->once())
+        $redis->expects($this->exactly(2))
             ->method('sAdd')
-            ->with('buckets', 'some_bucket_name');
+            ->withConsecutive(
+                ['buckets', 'some_bucket_name'],
+                ['types:some_bucket_name', 'counts']
+            )
+        ;
 
         $driver = new RedisDriver($redis);
         $driver->increment('some_bucket_name');
@@ -29,12 +32,15 @@ class RedisDriverTest extends \PHPUnit_Framework_TestCase
     public function timing_adds_bucket_to_buckets_set()
     {
         /** @var \Redis|\PHPUnit_Framework_MockObject_MockObject $redis */
-        $redis = $this->getMockBuilder('\Redis')
-            ->getMock();
+        $redis = $this->getMock(\Redis::class);
 
-        $redis->expects($this->once())
-            ->method('sAdd')
-            ->with('buckets', 'some_bucket_name');
+        $redis->expects($this->exactly(2))
+              ->method('sAdd')
+              ->withConsecutive(
+                  ['buckets', 'some_bucket_name'],
+                  ['types:some_bucket_name', 'timings']
+              )
+        ;
 
         $driver = new RedisDriver($redis);
         $driver->timing('some_bucket_name', 123);
@@ -46,15 +52,18 @@ class RedisDriverTest extends \PHPUnit_Framework_TestCase
     public function gauge_adds_bucket_to_buckets_set()
     {
         /** @var \Redis|\PHPUnit_Framework_MockObject_MockObject $redis */
-        $redis = $this->getMockBuilder('\Redis')
-            ->getMock();
+        $redis = $this->getMock(\Redis::class);
 
-        $redis->expects($this->once())
-            ->method('sAdd')
-            ->with('buckets', 'some_bucket_name');
+        $redis->expects($this->exactly(2))
+              ->method('sAdd')
+              ->withConsecutive(
+                  ['buckets', 'some_bucket_name'],
+                  ['types:some_bucket_name', 'gauges']
+              )
+        ;
 
         $driver = new RedisDriver($redis);
-        $driver->timing('some_bucket_name', 123);
+        $driver->gauge('some_bucket_name', 123);
     }
 
     /**
@@ -63,8 +72,7 @@ class RedisDriverTest extends \PHPUnit_Framework_TestCase
     public function increment_increments_by_one()
     {
         /** @var \Redis|\PHPUnit_Framework_MockObject_MockObject $redis */
-        $redis = $this->getMockBuilder('\Redis')
-            ->getMock();
+        $redis = $this->getMock(\Redis::class);
 
         $redis->expects($this->exactly(4))
             ->method('hIncrBy')

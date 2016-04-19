@@ -3,6 +3,7 @@
     "license": "MIT",
     "minimum-stability": "stable",
     "require": {
+      "php": ">=5.5"
     },
     "require-dev": {
         "ext-redis": "*",
@@ -11,9 +12,7 @@
     "autoload": {
       "psr-0": {
         "Fieg": "src/"
-      }
-    },
-    "autoload": {
+      },
       "psr-4": {
         "Fieg\\Statistico\\": "src/Fieg/Statistico/"
       }

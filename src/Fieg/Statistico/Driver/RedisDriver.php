@@ -18,22 +18,21 @@ class RedisDriver implements DriverInterface
     }
 
     /**
+     * @inheritdoc
+     *
      * @see http://blog.apiaxle.com/post/storing-near-realtime-stats-in-redis/
-     *
-     * @param string $bucket
-     *
-     * @return mixed
      */
     public function increment($bucket)
     {
+        $time = $this->syncedTime();
         $granularities = $this->getGranularities();
 
         foreach ($granularities as $granularity => $settings) {
-            $key   = $this->getKey($bucket, 'counts', $granularity, $settings);
-            $field = $this->getField($bucket, 'counts', $granularity, $settings);
+            $key = $this->getKey($bucket, 'counts', $granularity, $settings, $time);
+            $field = $this->getField($settings, $time);
 
             $this->redis->hIncrBy($key, $field, 1);
-            $this->redis->expireAt($key, $this->syncedTime() + $settings['ttl']);
+            $this->redis->expireAt($key, $time + $settings['ttl']);
         }
 
         $this->redis->sAdd('buckets', $bucket);
@@ -41,21 +40,19 @@ class RedisDriver implements DriverInterface
     }
 
     /**
-     * @param string  $bucket
-     * @param integer $time   time in ms
-     *
-     * @return mixed
+     * @inheritdoc
      */
     public function timing($bucket, $time)
     {
+        $time = $this->syncedTime();
         $granularities = $this->getGranularities();
 
         foreach ($granularities as $granularity => $settings) {
-            $key   = $this->getKey($bucket, 'timings', $granularity, $settings);
-            $field = $this->getField($bucket, 'timings', $granularity, $settings);
+            $key = $this->getKey($bucket, 'timings', $granularity, $settings, $time);
+            $field = $this->getField($settings, $time);
 
             $this->redis->hSetNx($key, $field, $time);
-            $this->redis->expireAt($key, $this->syncedTime() + $settings['ttl']);
+            $this->redis->expireAt($key, $time + $settings['ttl']);
         }
 
         $this->redis->sAdd('buckets', $bucket);
@@ -63,21 +60,19 @@ class RedisDriver implements DriverInterface
     }
 
     /**
-     * @param string $bucket
-     * @param float  $value
-     *
-     * @return mixed
+     * @inheritdoc
      */
     public function gauge($bucket, $value)
     {
+        $time = $this->syncedTime();
         $granularities = $this->getGranularities();
 
         foreach ($granularities as $granularity => $settings) {
-            $key   = $this->getKey($bucket, 'gauges', $granularity, $settings);
-            $field = $this->getField($bucket, 'gauges', $granularity, $settings);
+            $key = $this->getKey($bucket, 'gauges', $granularity, $settings, $time);
+            $field = $this->getField($settings, $time);
 
             $this->redis->hSet($key, $field, $value);
-            $this->redis->expireAt($key, $this->syncedTime() + $settings['ttl']);
+            $this->redis->expireAt($key, $time + $settings['ttl']);
         }
 
         $this->redis->sAdd('buckets', $bucket);
@@ -85,13 +80,7 @@ class RedisDriver implements DriverInterface
     }
 
     /**
-     * @param string    $bucket
-     * @param string    $type
-     * @param string    $granularity
-     * @param \DateTime $from
-     * @param \DateTime $to
-     *
-     * @return array
+     * @inheritdoc
      */
     public function export($bucket, $type, $granularity, \DateTime $from, \DateTime $to = null)
     {
@@ -122,7 +111,7 @@ class RedisDriver implements DriverInterface
     }
 
     /**
-     * @return string[]
+     * @inheritdoc
      */
     public function buckets()
     {
@@ -130,13 +119,11 @@ class RedisDriver implements DriverInterface
     }
 
     /**
-     * @param string $bucket
-     *
-     * @return string[]
+     * @inheritdoc
      */
     public function types($bucket)
     {
-        return (array) $this->redis->sMembers('types:' . $bucket);
+        return (array) $this->redis->sMembers('types:'.$bucket);
     }
 
     /**
@@ -154,24 +141,24 @@ class RedisDriver implements DriverInterface
     {
         $granularities = [
             'seconds' => [
-                'partition' => 3600,             # A single partition stores 3600 records (1 hour)
-                'ttl'       => 60 * 60 * 24,     # Each partition is kept for 24 hours
-                'factor'    => 1,                # A second consists of 1 second
+                'partition' => 3600,       # A single partition stores 3600 records (1 hour)
+                'ttl' => 60 * 60 * 24,     # Each partition is kept for 24 hours
+                'factor' => 1,             # A second consists of 1 second
             ],
             'minutes' => [
-                'partition' => 60 * 24,          # A single partition stores 1440 minutes (1 day)
-                'ttl'       => 60 * 60 * 24 * 7, # Each partition kept for 7 days
-                'factor'    => 60,               # A minute consists out of 60 seconds
+                'partition' => 60 * 24,    # A single partition stores 1440 minutes (1 day)
+                'ttl' => 60 * 60 * 24 * 7, # Each partition kept for 7 days
+                'factor' => 60,            # A minute consists out of 60 seconds
             ],
             'hours' => [
-                'partition' => 24,               # A single partition stores 24 hours (1 day)
-                'ttl'       => 60 * 60 * 24 * 7, # Each partition kept for 7 days
-                'factor'    => 3600,             # An hour consists out of 3600 seconds
+                'partition' => 24,         # A single partition stores 24 hours (1 day)
+                'ttl' => 60 * 60 * 24 * 7, # Each partition kept for 7 days
+                'factor' => 3600,          # An hour consists out of 3600 seconds
             ],
             'days' => [
-                'partition' => 365,              # A single partition stores 365 days (1 year)
-                'ttl'       => 86400 * 365 * 5,  # Kept for 5 years
-                'factor'    => 86400,            # A day consists out of 86400 seconds
+                'partition' => 365,        # A single partition stores 365 days (1 year)
+                'ttl' => 86400 * 365 * 5,  # Kept for 5 years
+                'factor' => 86400,         # A day consists out of 86400 seconds
             ],
         ];
 
@@ -180,23 +167,20 @@ class RedisDriver implements DriverInterface
 
     /**
      * @param int $time
-     * @param array $settings
+     * @param int $factor
      *
      * @return int
      */
-    protected function getRoundedTime($time, array $settings)
+    protected function getRoundedTime($time, $factor)
     {
-        $factor = $settings['partition'] * $settings['factor'];
-        $roundedTime = floor($time / $factor) * $factor;
-
-        return $roundedTime;
+        return floor($time / $factor) * $factor;
     }
 
     /**
-     * @param string $bucket
-     * @param string $type counts, timings, etc.
-     * @param string $granularity
-     * @param array $settings
+     * @param string   $bucket
+     * @param string   $type        counts, timings, etc.
+     * @param string   $granularity
+     * @param array    $settings
      * @param null|int $time
      *
      * @return string
@@ -204,32 +188,31 @@ class RedisDriver implements DriverInterface
     protected function getKey($bucket, $type, $granularity, array $settings, $time = null)
     {
         $time = $time ?: $this->syncedTime();
-
-        $roundedTime = $this->getRoundedTime($time, $settings);
+        $factor = $settings['partition'] * $settings['factor'];
+        $roundedTime = $this->getRoundedTime($time, $factor);
 
         return sprintf('%s:%s:%s:%s', $bucket, $type, $granularity, $roundedTime);
     }
 
     /**
-     * @param string $bucket
-     * @param string $type        counts, timings, etc.
-     * @param string $granularity
-     * @param array  $settings
+     * @param array    $settings
+     * @param null|int $time
      *
      * @return string
      */
-    protected function getField($bucket, $type, $granularity, array $settings)
+    protected function getField(array $settings, $time = null)
     {
+        $time = $time ?: $this->syncedTime();
         $factor = $settings['factor'];
 
-        return floor($this->syncedTime() / $factor) * $factor;
+        return $this->getRoundedTime($time, $factor);
     }
 
     /**
-     * @param string $bucket
-     * @param string $type
-     * @param string $granularity
-     * @param array $settings
+     * @param string    $bucket
+     * @param string    $type
+     * @param string    $granularity
+     * @param array     $settings
      * @param \DateTime $from
      * @param \DateTime $to
      *
