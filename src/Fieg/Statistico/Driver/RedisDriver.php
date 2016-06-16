@@ -22,7 +22,7 @@ class RedisDriver implements DriverInterface
      *
      * @see http://blog.apiaxle.com/post/storing-near-realtime-stats-in-redis/
      */
-    public function increment($bucket)
+    public function increment($bucket, $step = 1)
     {
         $time = $this->syncedTime();
         $granularities = $this->getGranularities();
@@ -31,7 +31,7 @@ class RedisDriver implements DriverInterface
             $key = $this->getKey($bucket, 'counts', $granularity, $settings, $time);
             $field = $this->getField($settings, $time);
 
-            $this->redis->hIncrBy($key, $field, 1);
+            $this->redis->hIncrBy($key, $field, $step);
             $this->redis->expireAt($key, $time + $settings['ttl']);
         }
 

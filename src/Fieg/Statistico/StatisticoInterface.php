@@ -6,8 +6,11 @@ interface StatisticoInterface
 {
     /**
      * @param string $bucket
+     * @param $step
+     *
+     * @return
      */
-    public function increment($bucket);
+    public function increment($bucket, $step = 1);
 
     /**
      * @param string  $bucket
