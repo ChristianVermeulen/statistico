@@ -12,7 +12,7 @@ class RedisDriverTest extends \PHPUnit_Framework_TestCase
     public function increment_adds_bucket_to_buckets_set()
     {
         /** @var \Redis|\PHPUnit_Framework_MockObject_MockObject $redis */
-        $redis = $this->createMock(\Redis::class);
+        $redis = $this->getMock(\Redis::class);
 
         $redis->expects($this->exactly(2))
             ->method('sAdd')
@@ -32,7 +32,7 @@ class RedisDriverTest extends \PHPUnit_Framework_TestCase
     public function timing_adds_bucket_to_buckets_set()
     {
         /** @var \Redis|\PHPUnit_Framework_MockObject_MockObject $redis */
-        $redis = $this->createMock(\Redis::class);
+        $redis = $this->getMock(\Redis::class);
 
         $redis->expects($this->exactly(2))
               ->method('sAdd')
@@ -52,7 +52,7 @@ class RedisDriverTest extends \PHPUnit_Framework_TestCase
     public function gauge_adds_bucket_to_buckets_set()
     {
         /** @var \Redis|\PHPUnit_Framework_MockObject_MockObject $redis */
-        $redis = $this->createMock(\Redis::class);
+        $redis = $this->getMock(\Redis::class);
 
         $redis->expects($this->exactly(2))
               ->method('sAdd')
@@ -72,7 +72,7 @@ class RedisDriverTest extends \PHPUnit_Framework_TestCase
     public function increment_increments_by_one()
     {
         /** @var \Redis|\PHPUnit_Framework_MockObject_MockObject $redis */
-        $redis = $this->createMock(\Redis::class);
+        $redis = $this->getMock(\Redis::class);
 
         $redis->expects($this->exactly(4))
             ->method('hIncrBy')
@@ -93,7 +93,7 @@ class RedisDriverTest extends \PHPUnit_Framework_TestCase
     public function increment_increments_by_more_than_one()
     {
         /** @var \Redis|\PHPUnit_Framework_MockObject_MockObject $redis */
-        $redis = $this->createMock(\Redis::class);
+        $redis = $this->getMock(\Redis::class);
 
         $redis->expects($this->exactly(4))
             ->method('hIncrBy')
