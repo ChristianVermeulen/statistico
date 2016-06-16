@@ -86,4 +86,25 @@ class RedisDriverTest extends \PHPUnit_Framework_TestCase
         $driver = new RedisDriver($redis);
         $driver->increment('some_bucket_name');
     }
+
+    /**
+     * @test
+     */
+    public function increment_increments_by_more_than_one()
+    {
+        /** @var \Redis|\PHPUnit_Framework_MockObject_MockObject $redis */
+        $redis = $this->getMock(\Redis::class);
+
+        $redis->expects($this->exactly(4))
+            ->method('hIncrBy')
+            ->withConsecutive(
+                [$this->matchesRegularExpression('/^some_bucket_name:counts:seconds:\d+$/'), $this->isType('float'), 4],
+                [$this->matchesRegularExpression('/^some_bucket_name:counts:minutes:\d+$/'), $this->isType('float'), 4],
+                [$this->matchesRegularExpression('/^some_bucket_name:counts:hours:\d+$/'), $this->isType('float'), 4],
+                [$this->matchesRegularExpression('/^some_bucket_name:counts:days:\d+$/'), $this->isType('float'), 4]
+            );
+
+        $driver = new RedisDriver($redis);
+        $driver->increment('some_bucket_name', 4);
+    }
 }

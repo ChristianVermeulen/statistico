@@ -28,12 +28,13 @@ class Statistico implements StatisticoInterface
 
     /**
      * @param string $bucket
+     * @param int $step
      *
      * @return mixed
      */
-    public function increment($bucket)
+    public function increment($bucket, $step = 1)
     {
-        $this->driver->increment($bucket);
+        $this->driver->increment($bucket, $step);
     }
 
     /**
@@ -53,7 +54,7 @@ class Statistico implements StatisticoInterface
      *
      * @return mixed
      */
-    public function measure($bucket, \Closure $closure)
+    public function measure($bucket, callable $closure)
     {
         $start = round(microtime(true) * 1000);
 

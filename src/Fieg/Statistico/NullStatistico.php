@@ -5,16 +5,15 @@ namespace Fieg\Statistico;
 class NullStatistico implements StatisticoInterface
 {
     /**
-     * @param string $bucket
+     * @inheritdoc
      */
-    public function increment($bucket)
+    public function increment($bucket, $step = 1)
     {
         // noop
     }
 
     /**
-     * @param string $bucket
-     * @param integer $time time in ms
+     * @inheritdoc
      */
     public function timing($bucket, $time)
     {
@@ -22,8 +21,7 @@ class NullStatistico implements StatisticoInterface
     }
 
     /**
-     * @param string $bucket
-     * @param float|int $value
+     * @inheritdoc
      */
     public function gauge($bucket, $value)
     {
@@ -36,7 +34,7 @@ class NullStatistico implements StatisticoInterface
      *
      * @return mixed
      */
-    public function measure($bucket, \Closure $closure)
+    public function measure($bucket, callable $closure)
     {
         $retval = $closure();
 
